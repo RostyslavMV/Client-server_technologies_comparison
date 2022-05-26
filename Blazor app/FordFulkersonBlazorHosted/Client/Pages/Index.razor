@@ -1,0 +1,122 @@
+﻿@page "/"
+@using FordFulkersonBlazor.Shared
+@inject HttpClient Http
+
+<PageTitle>Ford Fulkerson</PageTitle>
+
+<h1>Ford Fulkerson</h1>
+
+
+@if (matrix == null)
+{
+	<p><em>Loading... Reading matrix</em></p>
+}
+else
+{
+	<p><em>Nodes count: @matrix.GetLength(1)</em></p>
+	<div style="margin-bottom:10px">
+		<button class="btn btn-primary" @onclick="onClickReadMatrix">Read matrix</button>
+	</div>
+	<div class="row">
+		<div class="column">
+			<div><button class="btn btn-primary" @onclick="onClickWasm">WASM</button></div>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Time, ms</th>
+						<th>Flow</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var timeFlow in timeFlowWasmList)
+					{
+						<tr>
+							<td>@timeFlow.timeMs</td>
+							<td>@timeFlow.flow</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		<div class="column">
+			<div><button class="btn btn-primary" @onclick="onClickNet">.NET</button></div>
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Time, ms</th>
+						<th>Flow</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var timeFlow in timeFlowNetList)
+					{
+						<tr>
+							<td>@timeFlow.timeMs</td>
+							<td>@timeFlow.flow</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+}
+
+@code {
+
+	private List<TimeFlowResponse> timeFlowWasmList = new List<TimeFlowResponse>();
+
+	private List<TimeFlowResponse> timeFlowNetList = new List<TimeFlowResponse>();
+
+	private int[,]? matrix;
+
+	protected override async Task OnInitializedAsync()
+	{
+		matrix = await readMatrix();
+	}
+
+	private void onClickWasm()
+	{
+		if (matrix != null)
+		{
+			var timeFlowWasm = FordFulkersonTimeFlowService.getTimeFlow(matrix);
+			timeFlowWasmList.Add(timeFlowWasm);
+		}
+	}
+
+	private async void onClickNet()
+	{
+		if (matrix != null)
+		{
+			var timeFlowNet = await Http.GetFromJsonAsync<TimeFlowResponse>("FordFulkersonTime");
+			if (timeFlowNet != null)
+			{
+				timeFlowNetList.Add(timeFlowNet);
+			}
+		}
+	}
+	private async void onClickReadMatrix()
+	{
+		matrix = await readMatrix();
+	}
+
+	private async Task<int[,]> readMatrix()
+	{
+		int[,] matrix;
+		var stringMatrix = await Http.GetStringAsync("matrix300.txt");
+		string[] matrixRows = stringMatrix.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+		int size = matrixRows.Length - 1;
+		matrix = new int[size, size];
+		for (int i = 0; i < size; i++)
+		{
+			int[] row = matrixRows[i].Split(",").Select(int.Parse).ToArray();
+			for (int j = 0; j < size; j++)
+			{
+				matrix[i, j] = row[j];
+			}
+		}
+		return matrix;
+	}
+
+
+}
